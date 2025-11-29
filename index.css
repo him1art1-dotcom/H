@@ -1,0 +1,508 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ========================================
+   CSS Variables for Dynamic Theming
+   ======================================== */
+:root {
+  /* Default Theme: Violet (Primary) & Pink (Secondary) */
+  --color-primary-400: 167 139 250; /* #a78bfa */
+  --color-primary-500: 124 58 237;  /* #7c3aed */
+  --color-primary-600: 109 40 217;  /* #6d28d9 */
+  
+  --color-secondary-400: 244 114 182; /* #f472b6 */
+  --color-secondary-500: 219 39 119;  /* #db2777 */
+  --color-secondary-600: 190 24 93;   /* #be185d */
+  
+  /* Dark Mode (Default) - Midnight Theme */
+  --bg-app: #0f172a;
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  
+  --glass-bg: rgba(30, 41, 59, 0.4);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+  
+  --input-bg: rgba(255, 255, 255, 0.03);
+  --input-focus-bg: rgba(255, 255, 255, 0.08);
+  
+  /* Blobs */
+  --blob-1: rgb(var(--color-primary-500));
+  --blob-2: rgb(var(--color-secondary-500));
+  --blob-3: #3b82f6;
+}
+
+/* Light Mode Variables - Morning Mist */
+html.light-mode {
+  --bg-app: #f1f5f9;
+  --text-main: #0f172a;
+  --text-muted: #475569;
+  
+  /* Cards: visible white plates with grey borders */
+  --glass-bg: rgba(255, 255, 255, 0.92);
+  --glass-border: rgba(0, 0, 0, 0.1);
+  --glass-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+  
+  --input-bg: #ffffff;
+  --input-focus-bg: #ffffff;
+  
+  /* Blobs (Softer Pastel) */
+  --blob-1: #e0e7ff;
+  --blob-2: #fae8ff;
+  --blob-3: #dbeafe;
+}
+
+/* ========================================
+   Base Styles
+   ======================================== */
+body {
+  background-color: var(--bg-app);
+  color: var(--text-main);
+  overflow-x: hidden;
+  font-family: 'Tajawal', sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.ambient-bg {
+  background-color: var(--bg-app);
+  transition: background-color 0.3s ease, opacity 0.3s ease;
+}
+
+html.light-mode .ambient-bg {
+  background-color: transparent;
+  opacity: 0.4;
+}
+html.light-mode .ambient-bg > div {
+  mix-blend-mode: multiply;
+  background-color: var(--blob-1);
+}
+html.light-mode .ambient-bg > div:nth-child(2) {
+  background-color: var(--blob-2);
+}
+html.light-mode .ambient-bg > div:nth-child(3) {
+  background-color: var(--blob-3);
+}
+
+/* ========================================
+   Glassmorphism Utilities
+   ======================================== */
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.glass-panel {
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-left: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.text-glow {
+  text-shadow: 0 0 20px rgba(var(--color-primary-500), 0.5);
+}
+
+.text-glow-pink {
+  text-shadow: 0 0 20px rgba(var(--color-secondary-500), 0.5);
+}
+
+.input-glass {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: white;
+  transition: all 0.3s ease;
+}
+.input-glass:focus {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgb(var(--color-primary-500));
+  box-shadow: 0 0 15px rgba(var(--color-primary-500), 0.2);
+  outline: none;
+}
+
+/* ========================================
+   Light Mode Styles
+   ======================================== */
+html.light-mode body {
+  background: linear-gradient(135deg, 
+    rgba(var(--color-primary-400), 0.06) 0%, 
+    #f8fafc 25%,
+    rgba(var(--color-secondary-400), 0.04) 50%,
+    #f1f5f9 75%,
+    rgba(var(--color-primary-400), 0.08) 100%
+  );
+  color: #1e293b;
+}
+
+/* Force Global Card Style in Light Mode - Grey borders for visibility */
+html.light-mode .glass,
+html.light-mode .glass-card {
+  background: var(--glass-bg) !important;
+  border: 1px solid var(--glass-border) !important;
+  box-shadow: var(--glass-shadow) !important;
+}
+
+/* Optional: Add subtle colored accent to some cards */
+html.light-mode .glass-card-accent {
+  background: linear-gradient(145deg,
+    rgba(var(--color-primary-400), 0.08) 0%,
+    var(--glass-bg) 30%,
+    rgba(var(--color-secondary-400), 0.05) 100%
+  ) !important;
+  border: 1px solid var(--glass-border) !important;
+}
+
+html.light-mode .glass-panel {
+  background: linear-gradient(180deg, 
+    rgba(255, 255, 255, 0.98) 0%,
+    rgba(var(--color-primary-400), 0.06) 100%
+  );
+  border-left: 1px solid var(--glass-border);
+  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.05);
+}
+
+html.light-mode .text-glow {
+  text-shadow: none;
+  color: rgb(var(--color-primary-600));
+}
+
+html.light-mode .text-glow-pink {
+  text-shadow: none;
+  color: rgb(var(--color-secondary-600));
+}
+
+html.light-mode .input-glass {
+  background: linear-gradient(135deg,
+    rgba(var(--color-primary-400), 0.04) 0%,
+    rgba(255, 255, 255, 0.98) 100%
+  );
+  border: 2px solid rgba(var(--color-primary-500), 0.22);
+  color: #1e293b;
+  box-shadow: 0 2px 8px rgba(var(--color-primary-500), 0.08),
+              inset 0 1px 2px rgba(var(--color-primary-400), 0.05);
+}
+html.light-mode .input-glass:focus {
+  background: linear-gradient(135deg,
+    rgba(var(--color-primary-400), 0.06) 0%,
+    white 100%
+  );
+  border-color: rgb(var(--color-primary-500));
+  box-shadow: 0 0 0 4px rgba(var(--color-primary-500), 0.15),
+              0 2px 8px rgba(var(--color-primary-500), 0.12);
+}
+html.light-mode .input-glass::placeholder {
+  color: #94a3b8;
+}
+
+/* Light mode text color overrides - maintaining proper contrast */
+html.light-mode .text-white { color: #1e293b !important; }
+html.light-mode .text-gray-100 { color: #1e293b !important; }
+html.light-mode .text-gray-200 { color: #334155 !important; }
+html.light-mode .text-gray-300 { color: #475569 !important; }
+html.light-mode .text-gray-400 { color: #64748b !important; }
+html.light-mode .text-gray-500 { color: #475569 !important; }
+html.light-mode .text-gray-600 { color: #334155 !important; }
+html.light-mode .text-gray-700 { color: #1e293b !important; }
+
+/* Keep primary/secondary colors vibrant */
+html.light-mode .text-primary-300 { color: rgb(var(--color-primary-500)) !important; }
+html.light-mode .text-primary-400 { color: rgb(var(--color-primary-600)) !important; }
+html.light-mode .text-secondary-300 { color: rgb(var(--color-secondary-500)) !important; }
+html.light-mode .text-secondary-400 { color: rgb(var(--color-secondary-600)) !important; }
+
+/* Light mode background overrides - Standardized visible backgrounds */
+html.light-mode .bg-white\/5,
+html.light-mode .bg-white\/10,
+html.light-mode .bg-white\/20 { 
+  background: var(--glass-bg) !important;
+  border-color: var(--glass-border) !important;
+}
+html.light-mode .bg-black\/20,
+html.light-mode .bg-black\/30,
+html.light-mode .bg-black\/40,
+html.light-mode .bg-black\/50 { 
+  background: rgba(0, 0, 0, 0.04) !important;
+}
+html.light-mode .bg-black\/60 { background: rgba(0, 0, 0, 0.5) !important; }
+html.light-mode .bg-black\/80 { background: rgba(0, 0, 0, 0.6) !important; }
+
+/* Card-like elements in light mode should be visible */
+html.light-mode [class*="bg-white/"][class*="rounded"][class*="border"],
+html.light-mode [class*="bg-black/"][class*="rounded"][class*="border"] {
+  background: var(--glass-bg) !important;
+  border-color: var(--glass-border) !important;
+  box-shadow: var(--glass-shadow) !important;
+}
+
+/* Light mode border overrides */
+html.light-mode .border-white\/5 { border-color: rgba(var(--color-primary-500), 0.15) !important; }
+html.light-mode .border-white\/10 { border-color: rgba(var(--color-primary-500), 0.2) !important; }
+html.light-mode .border-white\/20 { border-color: rgba(var(--color-primary-500), 0.25) !important; }
+
+/* Light mode hover states - colored */
+html.light-mode .hover\:bg-white\/5:hover { 
+  background: linear-gradient(135deg, rgba(var(--color-primary-400), 0.12), rgba(var(--color-secondary-400), 0.08)) !important; 
+}
+html.light-mode .hover\:bg-white\/10:hover { 
+  background: linear-gradient(135deg, rgba(var(--color-primary-400), 0.18), rgba(var(--color-secondary-400), 0.12)) !important; 
+}
+
+/* Light mode dark backgrounds converted to theme colors */
+html.light-mode .bg-dark-900, 
+html.light-mode .bg-\[\#0f172a\] { 
+  background: linear-gradient(135deg, 
+    rgb(var(--color-primary-500)) 0%,
+    rgb(var(--color-secondary-500)) 100%
+  ) !important; 
+}
+
+/* Light mode slate backgrounds */
+html.light-mode .bg-slate-800\/90 { background: rgba(255, 255, 255, 0.95) !important; }
+html.light-mode .bg-slate-900 { background: white !important; }
+
+/* Light mode ambient background opacity reduction */
+html.light-mode .fixed.inset-0.pointer-events-none.z-\[-1\] {
+  opacity: 0.2;
+}
+html.light-mode .fixed.inset-0.pointer-events-none.z-\[-1\] > div {
+  mix-blend-mode: multiply;
+  opacity: 0.3;
+}
+
+/* Light mode buttons */
+html.light-mode button.bg-primary-600,
+html.light-mode .bg-primary-600 {
+  background: rgb(var(--color-primary-500)) !important;
+  color: white !important;
+  box-shadow: 0 4px 14px rgba(var(--color-primary-500), 0.35);
+}
+html.light-mode button.bg-primary-600:hover,
+html.light-mode .bg-primary-600:hover {
+  background: rgb(var(--color-primary-600)) !important;
+  box-shadow: 0 6px 20px rgba(var(--color-primary-500), 0.45);
+}
+
+html.light-mode button.bg-secondary-600,
+html.light-mode .bg-secondary-600 {
+  background: rgb(var(--color-secondary-500)) !important;
+  color: white !important;
+  box-shadow: 0 4px 14px rgba(var(--color-secondary-500), 0.35);
+}
+
+/* Light mode tables - colored */
+html.light-mode table thead tr {
+  background: linear-gradient(135deg, 
+    rgba(var(--color-primary-400), 0.12) 0%,
+    rgba(var(--color-secondary-400), 0.08) 100%
+  ) !important;
+}
+html.light-mode table tbody tr:hover {
+  background: linear-gradient(135deg, 
+    rgba(var(--color-primary-400), 0.08) 0%,
+    rgba(var(--color-secondary-400), 0.04) 100%
+  ) !important;
+}
+html.light-mode table tbody tr:nth-child(even) {
+  background: rgba(var(--color-primary-400), 0.03) !important;
+}
+html.light-mode table th {
+  color: rgb(var(--color-primary-600)) !important;
+  font-weight: 600;
+}
+html.light-mode table td {
+  border-color: rgba(var(--color-primary-500), 0.12) !important;
+}
+
+/* Light mode status badges - more vibrant */
+html.light-mode .bg-emerald-500\/20 { 
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.18), rgba(5, 150, 105, 0.12)) !important; 
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+html.light-mode .bg-amber-500\/20 { 
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.18), rgba(217, 119, 6, 0.12)) !important; 
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+html.light-mode .bg-red-500\/20 { 
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.18), rgba(220, 38, 38, 0.12)) !important; 
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+html.light-mode .bg-blue-500\/20 { 
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.18), rgba(37, 99, 235, 0.12)) !important; 
+  border: 1px solid rgba(59, 130, 246, 0.25);
+}
+html.light-mode .bg-emerald-500\/10 { 
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(5, 150, 105, 0.08)) !important; 
+}
+html.light-mode .bg-amber-500\/10 { 
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(217, 119, 6, 0.08)) !important; 
+}
+html.light-mode .bg-red-500\/10 { 
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.12), rgba(220, 38, 38, 0.08)) !important; 
+}
+
+html.light-mode .text-emerald-400 { color: #059669 !important; }
+html.light-mode .text-emerald-300 { color: #10b981 !important; }
+html.light-mode .text-amber-400 { color: #d97706 !important; }
+html.light-mode .text-amber-300 { color: #f59e0b !important; }
+html.light-mode .text-red-400 { color: #dc2626 !important; }
+html.light-mode .text-red-300 { color: #ef4444 !important; }
+html.light-mode .text-blue-400 { color: #2563eb !important; }
+html.light-mode .text-blue-300 { color: #3b82f6 !important; }
+
+/* Light mode chart backgrounds */
+html.light-mode .recharts-wrapper { background: transparent !important; }
+html.light-mode .recharts-cartesian-grid line { stroke: rgba(var(--color-primary-500), 0.15) !important; }
+html.light-mode .recharts-text { fill: #475569 !important; }
+
+/* Light mode gradients - keep them vibrant but softer */
+html.light-mode .from-primary-500 { --tw-gradient-from: rgb(var(--color-primary-500)) !important; }
+html.light-mode .to-secondary-500 { --tw-gradient-to: rgb(var(--color-secondary-500)) !important; }
+html.light-mode .bg-gradient-to-r.from-primary-400.to-secondary-400 {
+  background: linear-gradient(to right, rgb(var(--color-primary-500)), rgb(var(--color-secondary-500))) !important;
+}
+html.light-mode .bg-gradient-to-br.from-primary-500 {
+  background: linear-gradient(to bottom right, rgb(var(--color-primary-400)), rgb(var(--color-primary-600))) !important;
+}
+
+/* Light mode modals & overlays */
+html.light-mode .backdrop-blur-sm { backdrop-filter: blur(8px); }
+html.light-mode .backdrop-blur-xl { backdrop-filter: blur(20px); }
+
+/* Light mode notification bell area */
+html.light-mode .bg-gradient-to-r.from-pink-500.to-primary-500 {
+  background: linear-gradient(to right, rgb(var(--color-secondary-500)), rgb(var(--color-primary-500))) !important;
+}
+
+/* Light mode drop shadows */
+html.light-mode .drop-shadow-lg { filter: drop-shadow(0 10px 8px rgba(var(--color-primary-500), 0.15)) !important; }
+html.light-mode .shadow-lg { box-shadow: 0 10px 15px -3px rgba(var(--color-primary-500), 0.12), 0 4px 6px -4px rgba(0,0,0,0.05) !important; }
+html.light-mode .shadow-xl { box-shadow: 0 20px 25px -5px rgba(var(--color-primary-500), 0.15), 0 8px 10px -6px rgba(0,0,0,0.05) !important; }
+html.light-mode .shadow-2xl { box-shadow: 0 25px 50px -12px rgba(var(--color-primary-500), 0.2) !important; }
+
+/* Light mode scrollbar */
+html.light-mode ::-webkit-scrollbar-track {
+  background: rgba(var(--color-primary-400), 0.08); 
+}
+html.light-mode ::-webkit-scrollbar-thumb {
+  background: rgba(var(--color-primary-500), 0.35); 
+  border: 2px solid rgba(255, 255, 255, 0.8);
+}
+html.light-mode ::-webkit-scrollbar-thumb:hover {
+  background: rgba(var(--color-primary-500), 0.5); 
+}
+
+/* Light mode selection */
+html.light-mode ::selection {
+  background: rgba(var(--color-primary-500), 0.25);
+  color: #1e293b;
+}
+
+/* ========================================
+   Scrollbar (Dark Mode Default)
+   ======================================== */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.5); 
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(var(--color-primary-500), 0.3); 
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(var(--color-primary-500), 0.5); 
+}
+
+/* ========================================
+   Animations
+   ======================================== */
+@keyframes blob {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+}
+
+.animate-blob {
+  animation: blob 7s infinite;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.animate-fade-in {
+  animation: fade-in 0.5s ease-out forwards;
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in-up {
+  animation: fade-in-up 0.6s ease-out forwards;
+}
+
+/* ========================================
+   Print Styles
+   ======================================== */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #print-area, #print-area * {
+    visibility: visible;
+  }
+  #print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    background: white;
+    color: black;
+    padding: 20px;
+    z-index: 9999;
+  }
+  .no-print {
+    display: none !important;
+  }
+  /* Override dark mode for print */
+  .glass, .glass-card, .input-glass {
+    background: none !important;
+    border: 1px solid #ccc !important;
+    box-shadow: none !important;
+    color: black !important;
+  }
+}
+
