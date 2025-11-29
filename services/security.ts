@@ -3,6 +3,7 @@
 // Helper: Convert ArrayBuffer/Uint8Array to Hex String
 // Fix: We use 'any' here to accept both ArrayBuffer and Uint8Array without TS complaints
 function toHex(buffer: any): string {
+    if (!buffer) return '';
     return Array.from(new Uint8Array(buffer))
         .map(b => b.toString(16).padStart(2, '0'))
         .join('');
@@ -22,7 +23,7 @@ function fromHex(hex: string): Uint8Array {
  * Format expected: iterations:salt:hash
  */
 export function isHashed(password: string): boolean {
-    return password.includes(':') && password.split(':').length === 3;
+    return typeof password === 'string' && password.includes(':') && password.split(':').length === 3;
 }
 
 /**
@@ -55,20 +56,27 @@ export async function hashPassword(password: string): Promise<string> {
     );
 
     // 3. Return format: iterations:salt(hex):hash(hex)
-    return `${iterations}:${toHex(salt)}:${toHex(derivedBits)}`;
+    // Cast to 'any' to avoid strict ArrayBuffer vs Uint8Array checks
+    return `${iterations}:${toHex(salt as any)}:${toHex(derivedBits as any)}`;
 }
 
 /**
  * Verifies a password against a stored hash
  */
 export async function verifyPassword(password: string, storedHash: string): Promise<boolean> {
+    // Basic validation
+    if (!password || !storedHash) return false;
+
     // If stored password is plain text (legacy), compare directly
     if (!isHashed(storedHash)) {
         return password === storedHash;
     }
 
     try {
-        const [iterationsStr, saltHex, hashHex] = storedHash.split(':');
+        const parts = storedHash.split(':');
+        if (parts.length !== 3) return false;
+
+        const [iterationsStr, saltHex, hashHex] = parts;
         const iterations = parseInt(iterationsStr, 10);
         const salt = fromHex(saltHex);
         const originalHash = fromHex(hashHex);
@@ -98,7 +106,7 @@ export async function verifyPassword(password: string, storedHash: string): Prom
         
         if (newHash.length !== originalHash.length) return false;
         
-        // Constant-time comparison simulation
+        // Constant-time comparison simulation to prevent timing attacks
         let result = 0;
         for (let i = 0; i < newHash.length; i++) {
             result |= newHash[i] ^ originalHash[i];
