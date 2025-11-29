@@ -1,6 +1,5 @@
-
 import { supabase } from './supabase';
-import { Student, AttendanceRecord, ExitRecord, ViolationRecord, Notification, DashboardStats, ReportFilter, DailySummary, STORAGE_KEYS, SystemSettings, DiagnosticResult, Role, SchoolClass, User, AppTheme } from '../types';
+import { Student, AttendanceRecord, ExitRecord, ViolationRecord, Notification, DashboardStats, ReportFilter, DailySummary, STORAGE_KEYS, SystemSettings, DiagnosticResult, Role, SchoolClass, User, AppTheme, AttendanceScanResult } from '../types';
 import { appCache, staticCache, realtimeCache, CACHE_KEYS } from './cache';
 
 // Configuration
@@ -17,17 +16,11 @@ const CACHE_TTL = {
   USERS: 5 * 60 * 1000,         // 5 minutes
 };
 
-// Helper for Local Timezone Date String (YYYY-MM-DD)
-// EXPORTED NOW to be used across pages for consistency
 export const getLocalISODate = (): string => {
     const now = new Date();
     const offset = now.getTimezoneOffset() * 60000;
     return new Date(now.getTime() - offset).toISOString().split('T')[0];
 };
-
-// ------------------------------------------------------------------
-// 1. Interface Definition (The Contract)
-// ------------------------------------------------------------------
 
 // Sync status type for UI
 export type SyncStatus = 'online' | 'offline' | 'syncing';
@@ -43,6 +36,9 @@ interface QueuedAttendance {
   synced: boolean;
 }
 
+// ------------------------------------------------------------------
+// 1. Interface Definition (The Contract)
+// ------------------------------------------------------------------
 interface IDatabaseProvider {
   getStudents(): Promise<Student[]>;
   getStudentsByGuardian(guardianPhone: string): Promise<Student[]>;
@@ -80,6 +76,8 @@ interface IDatabaseProvider {
   
   saveNotification(notification: Notification): Promise<void>;
   getStudentNotifications(studentId: string, className: string): Promise<Notification[]>;
+  
+  // ✅ FIX: Updated signature to accept User | 'kiosk'
   subscribeToNotifications(user: User | 'kiosk', callback: (n: Notification) => void): { unsubscribe: () => void };
 
   // Structure & Users
@@ -100,7 +98,7 @@ interface IDatabaseProvider {
 
 // Mappers
 const mapStudent = (data: any): Student => ({
-  id: String(data.id), // Ensure string - used for attendance and parent login
+  id: String(data.id),
   name: data.name,
   className: data.class_name || data.className,
   section: data.section,
@@ -134,7 +132,6 @@ class CloudProvider implements IDatabaseProvider {
   private _pendingCount = 0;
 
   constructor() {
-    // Load cache from localStorage on init
     this.loadLocalCache();
   }
 
@@ -184,7 +181,6 @@ class CloudProvider implements IDatabaseProvider {
   async preloadForKiosk(): Promise<void> {
     console.log('[Kiosk] Preloading students...');
     try {
-      // Fetch fresh students from Supabase
       const { data, error } = await supabase.from('students').select('*');
       if (!error && data) {
         this.localStudentsCache = data.map(mapStudent);
@@ -192,11 +188,9 @@ class CloudProvider implements IDatabaseProvider {
         console.log(`[Kiosk] Cached ${this.localStudentsCache.length} students`);
       }
 
-      // Also cache settings for late calculation
       const settings = await this.getSettings();
       localStorage.setItem(KIOSK_SETTINGS_KEY, JSON.stringify(settings));
 
-      // Load today's attendance for duplicate check
       const today = getLocalISODate();
       const { data: todayLogs } = await supabase.from('attendance_logs').select('student_id').eq('date', today);
       if (todayLogs) {
@@ -207,8 +201,6 @@ class CloudProvider implements IDatabaseProvider {
       }
 
       this.setSyncStatus('online');
-      
-      // Start background sync silently
       this.startBackgroundSync();
     } catch (e) {
       console.warn('[Kiosk] Preload failed, using cached data:', e);
@@ -240,7 +232,6 @@ class CloudProvider implements IDatabaseProvider {
       }
     }
 
-    // Also check sync queue
     const inQueue = this.syncQueue.some(q => q.studentId === id && q.date === today);
     if (inQueue) {
       return { success: false, message: 'تم تسجيل الدخول مسبقاً لهذا اليوم' };
@@ -303,7 +294,6 @@ class CloudProvider implements IDatabaseProvider {
     const lateCount = queueLogs.filter(q => q.status === 'late').length;
     const totalMinutes = queueLogs.reduce((sum, q) => sum + q.minutesLate, 0);
 
-    // 8. Return SUCCESS instantly (no await!)
     return {
       success: true,
       message: isLate 
@@ -342,7 +332,6 @@ class CloudProvider implements IDatabaseProvider {
 
           if (error) {
             if (error.code === '23505') {
-              // Duplicate - mark as synced anyway
               item.synced = true;
             } else {
               console.warn(`[Sync] Failed to sync ${item.id}:`, error);
@@ -358,7 +347,6 @@ class CloudProvider implements IDatabaseProvider {
         }
       }
 
-      // Clean up synced items (keep last 100 for stats)
       this.syncQueue = this.syncQueue.filter(q => !q.synced || this.syncQueue.indexOf(q) > this.syncQueue.length - 100);
       this._pendingCount = this.syncQueue.filter(q => !q.synced).length;
       this.saveLocalCache();
@@ -379,9 +367,7 @@ class CloudProvider implements IDatabaseProvider {
   // Force sync now (for Admin refresh button)
   async forceSyncNow(): Promise<void> {
     this.setSyncStatus('syncing');
-    
     try {
-      // Sync pending attendance
       const pending = this.syncQueue.filter(q => !q.synced);
       for (const item of pending) {
         try {
@@ -398,18 +384,13 @@ class CloudProvider implements IDatabaseProvider {
           if (!error || error.code === '23505') {
             item.synced = true;
           }
-        } catch (e) {
-          // Continue with next
-        }
+        } catch (e) {}
       }
 
       this.syncQueue = this.syncQueue.filter(q => !q.synced);
       this._pendingCount = this.syncQueue.length;
       this.saveLocalCache();
-
-      // Refresh student cache
       await this.preloadForKiosk();
-      
       this.setSyncStatus('online');
     } catch (e) {
       console.error('[Sync] Force sync failed:', e);
@@ -418,7 +399,6 @@ class CloudProvider implements IDatabaseProvider {
   }
 
   async getStudents(): Promise<Student[]> {
-    // Try cache first
     const cached = appCache.get<Student[]>(CACHE_KEYS.STUDENTS);
     if (cached) return cached;
 
@@ -431,7 +411,6 @@ class CloudProvider implements IDatabaseProvider {
   }
 
   async getStudentsByGuardian(guardianPhone: string): Promise<Student[]> {
-    // Use main students cache if available
     const allStudents = appCache.get<Student[]>(CACHE_KEYS.STUDENTS);
     if (allStudents) {
       return allStudents.filter(s => s.guardianPhone === guardianPhone);
@@ -443,7 +422,6 @@ class CloudProvider implements IDatabaseProvider {
   }
 
   async getStudentById(id: string): Promise<Student | undefined> {
-    // Check cache first
     const allStudents = appCache.get<Student[]>(CACHE_KEYS.STUDENTS);
     if (allStudents) {
       return allStudents.find(s => s.id === id);
@@ -463,8 +441,6 @@ class CloudProvider implements IDatabaseProvider {
     }));
     const { error } = await supabase.from('students').upsert(mapped);
     if (error) throw error;
-    
-    // Invalidate cache
     appCache.delete(CACHE_KEYS.STUDENTS);
   }
 
@@ -476,16 +452,12 @@ class CloudProvider implements IDatabaseProvider {
         guardian_phone: student.guardianPhone
     }).eq('id', student.id);
     if (error) throw error;
-    
-    // Invalidate cache
     appCache.delete(CACHE_KEYS.STUDENTS);
   }
 
   async deleteStudent(studentId: string): Promise<void> {
     const { error } = await supabase.from('students').delete().eq('id', studentId);
     if (error) throw error;
-    
-    // Invalidate cache
     appCache.delete(CACHE_KEYS.STUDENTS);
   }
 
@@ -503,16 +475,13 @@ class CloudProvider implements IDatabaseProvider {
 
   async markAttendance(id: string): Promise<{ success: boolean, message: string, record?: AttendanceRecord, student?: Student, stats?: { lateCount: number, todayMinutes: number, totalMinutes: number } }> {
     try {
-        // We use maybeSingle to avoid 406 error if ID format is wrong (e.g. text vs uuid)
         const { data: studentData, error: studentError } = await supabase.from('students').select('*').eq('id', id).maybeSingle();
-        
         if (studentError || !studentData) return { success: false, message: 'رقم الطالب غير صحيح' };
         
         const student = mapStudent(studentData);
         const now = new Date();
-        const today = getLocalISODate(); // Use local date
+        const today = getLocalISODate();
         const settings = await this.getSettings();
-        // Default fallback for time: 07:30, grace: 0
         const assemblyTime = (settings as any)?.assemblyTime || '07:30';
         const gracePeriod = (settings as any)?.gracePeriod ?? 0;
         const [h, m] = assemblyTime.split(':').map(Number);
@@ -532,7 +501,6 @@ class CloudProvider implements IDatabaseProvider {
             return { success: false, message: 'حدث خطأ أثناء التسجيل' };
         }
 
-        // Fetch student's attendance stats for the display card
         const { data: allLogs } = await supabase.from('attendance_logs').select('*').eq('student_id', id);
         const studentLogs = allLogs || [];
         const lateCount = studentLogs.filter(l => l.status === 'late').length;
@@ -552,209 +520,26 @@ class CloudProvider implements IDatabaseProvider {
     }
   }
 
-  subscribeToAttendance(callback: (record: AttendanceRecord) => void): { unsubscribe: () => void } {
-    const subscription = supabase
-      .channel('attendance_realtime')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'attendance_logs' },
-        (payload) => {
-          if (payload.new) {
-            callback(mapAttendance(payload.new));
-          }
-        }
-      )
-      .subscribe();
-
-    return {
-      unsubscribe: () => {
-        supabase.removeChannel(subscription);
-      }
-    };
-  }
-
-  async getDailySummary(date: string): Promise<DailySummary | null> {
-    const { data } = await supabase.from('daily_summaries').select('*').eq('date_summary', date).maybeSingle();
-    return data as DailySummary;
-  }
-
-  async saveDailySummary(summary: DailySummary): Promise<void> {
-    await supabase.from('daily_summaries').upsert({ date_summary: summary.date_summary, summary_data: summary.summary_data });
-  }
-
-  async getDashboardStats(): Promise<DashboardStats> {
-    const students = await this.getStudents();
-    const today = getLocalISODate();
-    const attendance = await this.getAttendance(today);
-    const totalStudents = students.length;
-    const presentCount = attendance.filter(a => a.status === 'present').length;
-    const lateCount = attendance.filter(a => a.status === 'late').length;
-    const absentCount = totalStudents - (presentCount + lateCount);
-    const attendanceRate = totalStudents > 0 ? ((presentCount + lateCount) / totalStudents) * 100 : 0;
-    return { totalStudents, presentCount, lateCount, absentCount, attendanceRate: Math.round(attendanceRate) };
-  }
-
-  async getWeeklyStats(): Promise<any[]> {
-    // Calculate real weekly stats from attendance data
-    const days = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس'];
-    const { data: students } = await supabase.from('students').select('id');
-    const totalStudents = students?.length || 0;
-    if (totalStudents === 0) return days.map(day => ({ day, presence: 0 }));
-
-    const result: any[] = [];
-    const today = new Date();
-    
-    for (let i = 4; i >= 0; i--) {
-      const date = new Date(today);
-      date.setDate(date.getDate() - i);
-      const dateStr = date.toISOString().split('T')[0];
-      const dayIndex = date.getDay(); // 0 = Sunday
-      
-      const { data: logs } = await supabase.from('attendance_logs').select('*').eq('date', dateStr);
-      const attendedCount = logs?.length || 0;
-      const presence = totalStudents > 0 ? Math.round((attendedCount / totalStudents) * 100) : 0;
-      
-      result.push({ day: days[dayIndex] || days[0], presence });
-    }
-    return result;
-  }
-
-  async getClassStats(): Promise<any[]> {
-    // Calculate real class stats
-    const { data: classes } = await supabase.from('classes').select('*');
-    const { data: students } = await supabase.from('students').select('*');
-    const today = getLocalISODate();
-    const { data: attendance } = await supabase.from('attendance_logs').select('*').eq('date', today);
-    
-    if (!classes || classes.length === 0) return [];
-    
-    const attendedIds = new Set((attendance || []).map(a => a.student_id));
-    
-    return (classes || []).map(cls => {
-      const classStudents = (students || []).filter(s => s.class_name === cls.name);
-      const absentCount = classStudents.filter(s => !attendedIds.has(s.id)).length;
-      return { name: cls.name, absent: absentCount };
-    });
-  }
-
-  async getAttendanceReport(filters: ReportFilter): Promise<{summary: any, details: any[]}> {
-      let query = supabase.from('attendance_logs').select('*').gte('date', filters.dateFrom).lte('date', filters.dateTo);
-      const { data: logs } = await query;
-      const allLogs = (logs || []).map(mapAttendance);
-
-      let studentQuery = supabase.from('students').select('*');
-      if (filters.className) studentQuery = studentQuery.eq('class_name', filters.className);
-      if (filters.section) studentQuery = studentQuery.eq('section', filters.section);
-
-      const { data: studentData } = await studentQuery;
-      const students = (studentData || []).map(mapStudent);
-
-      const details = allLogs.map(log => {
-          const student = students.find(s => s.id === log.studentId);
-          if (!student) return null;
-          return { studentId: log.studentId, studentName: student.name, className: student.className, date: log.date, time: log.timestamp, status: log.status };
-      }).filter(Boolean);
-
-      return {
-          summary: { totalRecords: details.length, late: details.filter(d => d!.status === 'late').length, present: details.filter(d => d!.status === 'present').length },
-          details: details as any[]
-      };
-  }
-
-  async addExit(record: ExitRecord): Promise<void> {
-    await supabase.from('exits').insert({ 
-      student_id: record.studentId, 
-      reason: record.reason, 
-      exit_time: record.exit_time, 
-      supervisor_name: record.supervisorName,
-      notes: record.notes,
-      status: record.status || 'approved'
-    });
-  }
-
-  async getTodayExits(): Promise<ExitRecord[]> {
-      const today = getLocalISODate();
-      const { data } = await supabase.from('exits').select('*').gte('exit_time', `${today}T00:00:00`);
-      return (data || []).map((d: any) => ({ 
-        id: d.id, 
-        studentId: d.student_id, 
-        reason: d.reason, 
-        exit_time: d.exit_time, 
-        created_by: d.created_by,
-        supervisor_name: d.supervisor_name,
-        notes: d.notes,
-        status: d.status
-      }));
-  }
-
-  async getStudentExits(studentId: string): Promise<ExitRecord[]> {
-      const { data } = await supabase.from('exits').select('*').eq('student_id', studentId).order('exit_time', { ascending: false });
-      return (data || []).map((d: any) => ({ id: d.id, studentId: d.student_id, reason: d.reason, exit_time: d.exit_time, created_by: d.created_by }));
-  }
-
-  async addViolation(record: ViolationRecord): Promise<void> {
-    await supabase.from('violations').insert({ 
-      student_id: record.studentId, 
-      type: record.type, 
-      level: record.level, 
-      description: record.description,
-      action_taken: record.action_taken,
-      summon_guardian: record.summon_guardian
-    });
-  }
-
-  async getViolations(studentId?: string): Promise<ViolationRecord[]> {
-      let query = supabase.from('violations').select('*');
-      if (studentId) query = query.eq('student_id', studentId);
-      const { data } = await query;
-      return (data || []).map((d: any) => ({ 
-        id: d.id, 
-        studentId: d.student_id, 
-        type: d.type, 
-        description: d.description, 
-        level: d.level, 
-        action_taken: d.action_taken,
-        summon_guardian: d.summon_guardian,
-        created_at: d.created_at 
-      }));
-  }
-
-  async getTodayViolations(): Promise<ViolationRecord[]> {
-    const today = getLocalISODate();
-    const { data } = await supabase.from('violations').select('*').gte('created_at', `${today}T00:00:00`);
-    return (data || []).map((d: any) => ({ id: d.id, studentId: d.student_id, type: d.type, description: d.description, level: d.level, created_at: d.created_at }));
-  }
-
-  async saveNotification(notification: Notification): Promise<void> {
-      await supabase.from('notifications').insert({ message: notification.message, target_audience: notification.target_audience, target_id: notification.target_id, type: notification.type });
-  }
-
-  async getStudentNotifications(studentId: string, className: string): Promise<Notification[]> {
-      const { data, error } = await supabase.from('notifications').select('*').or(`target_audience.eq.all,and(target_audience.eq.class,target_id.eq.${className}),and(target_audience.eq.student,target_id.eq.${studentId})`).order('created_at', { ascending: false });
-      if (error) return [];
-      return data.map((d: any) => ({ id: d.id, message: d.message, target_audience: d.target_audience, target_id: d.target_id, type: d.type, created_at: d.created_at }));
-  }
-
+  // ✅ FIX: Separated Logic for User vs 'kiosk'
   subscribeToNotifications(user: User | 'kiosk', callback: (n: Notification) => void): { unsubscribe: () => void } {
-    let filter = '';
-    if (user === 'kiosk') {
-      filter = `target_audience=eq.kiosk`;
-    } else {
-      filter = `or(target_audience.eq.all,and(target_audience.eq.class,target_id.eq.${user.assignedClasses?.[0]?.className || ''}),and(target_audience.eq.student,target_id.eq.${user.id}),target_audience.eq.${user.role})`;
-    }
     const sub = supabase
       .channel('notifications_realtime')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, (payload) => {
         const n = payload.new as Notification;
-        if (
-          (user === 'kiosk' && n.target_audience === 'kiosk') ||
-          (user !== 'kiosk' &&
-            (n.target_audience === 'all' ||
-              (n.target_audience === 'student' && n.target_id === user.id) ||
-              (n.target_audience === 'class' && n.target_id && user.assignedClasses?.some(c => c.className === n.target_id)) ||
-              (n.target_audience === user.role))
-          )
-        ) {
+        let isRelevant = false;
+
+        if (user === 'kiosk') {
+            isRelevant = n.target_audience === 'kiosk';
+        } else {
+            const currentUser = user as User;
+            isRelevant = 
+                n.target_audience === 'all' ||
+                (n.target_audience === 'student' && n.target_id === currentUser.id) ||
+                (n.target_audience === 'class' && n.target_id && currentUser.assignedClasses?.some(c => c.className === n.target_id)) ||
+                (n.target_audience === currentUser.role);
+        }
+
+        if (isRelevant) {
           callback(n);
         }
       })
@@ -762,9 +547,7 @@ class CloudProvider implements IDatabaseProvider {
     return { unsubscribe: () => supabase.removeChannel(sub) };
   }
 
-  // --- Structure & Users (Cloud) ---
   async getClasses(): Promise<SchoolClass[]> {
-    // Try cache first
     const cached = staticCache.get<SchoolClass[]>(CACHE_KEYS.CLASSES);
     if (cached) return cached;
 
@@ -778,18 +561,15 @@ class CloudProvider implements IDatabaseProvider {
   
   async saveClass(schoolClass: SchoolClass): Promise<void> {
     await supabase.from('classes').upsert(schoolClass);
-    // Invalidate cache
     staticCache.delete(CACHE_KEYS.CLASSES);
   }
 
   async deleteClass(classId: string): Promise<void> {
     await supabase.from('classes').delete().eq('id', classId);
-    // Invalidate cache
     staticCache.delete(CACHE_KEYS.CLASSES);
   }
 
   async getUsers(): Promise<User[]> {
-    // Try cache first
     const cached = appCache.get<User[]>(CACHE_KEYS.USERS);
     if (cached) return cached;
 
@@ -813,20 +593,15 @@ class CloudProvider implements IDatabaseProvider {
       role: user.role, 
       password: user.password 
     });
-    // Invalidate cache
     appCache.delete(CACHE_KEYS.USERS);
   }
 
   async deleteUser(userId: string): Promise<void> {
     await supabase.from('users').delete().eq('id', userId);
-    // Invalidate cache
     appCache.delete(CACHE_KEYS.USERS);
   }
 
-
-  // Support Extensions (Cloud)
   async getSettings(): Promise<SystemSettings> {
-    // Try cache first
     const cached = staticCache.get<SystemSettings>(CACHE_KEYS.SETTINGS);
     if (cached) return cached;
 
@@ -842,7 +617,6 @@ class CloudProvider implements IDatabaseProvider {
     try {
         const payload: any = { id: 1, ...settings };
         await supabase.from('settings').upsert(payload);
-        // Invalidate cache
         staticCache.delete(CACHE_KEYS.SETTINGS);
     } catch(e) { console.error("Settings table might be missing", e); }
   }
@@ -864,7 +638,6 @@ class CloudProvider implements IDatabaseProvider {
     const today = getLocalISODate();
 
     try {
-        // 1. Check System Connection
         const { count: userCount, error: userError } = await supabase.from('users').select('*', { count: 'exact', head: true });
         results.push({
             key: 'connection',
@@ -874,7 +647,6 @@ class CloudProvider implements IDatabaseProvider {
             hint: userError ? 'تحقق من مفاتيح API في الإعدادات' : undefined
         });
 
-        // 2. Integrity: Students without Guardian Phone
         const { count: missingPhoneCount } = await supabase.from('students').select('*', { count: 'exact', head: true }).or('guardian_phone.is.null,guardian_phone.eq.""');
         results.push({
             key: 'integrity',
@@ -885,17 +657,6 @@ class CloudProvider implements IDatabaseProvider {
             hint: 'استخدم لوحة الإدارة لتحديث بيانات الطلاب الناقصة'
         });
 
-        // 3. Communication: Students without Guardian Phones (re-use count from integrity check)
-        results.push({
-            key: 'communication',
-            title: 'قنوات التواصل',
-            status: (missingPhoneCount || 0) > 0 ? 'warning' : 'ok',
-            message: (missingPhoneCount || 0) > 0 ? `يوجد ${missingPhoneCount} طالب بدون رقم تواصل` : 'جميع الطلاب لديهم أرقام تواصل',
-            count: missingPhoneCount || 0,
-            hint: 'لن تصل رسائل الواتساب أو الإشعارات لهؤلاء الطلاب'
-        });
-
-        // 4. Operations: Daily Summary
         const summary = await this.getDailySummary(today);
         results.push({
             key: 'operations',
@@ -923,56 +684,36 @@ class LocalProvider implements IDatabaseProvider {
     this.seed();
   }
 
-  /**
-   * Bootstrap: Initialize empty data structures with only essential defaults.
-   * No dummy/test data - production ready.
-   */
   private seed() {
-    // Initialize empty students array (no dummy data)
     if (!localStorage.getItem(STORAGE_KEYS.STUDENTS)) {
       localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify([]));
     }
-
-    // Initialize empty attendance logs
     if (!localStorage.getItem(STORAGE_KEYS.ATTENDANCE)) {
       localStorage.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify([]));
     }
-
-    // Initialize empty exits
     if (!localStorage.getItem(STORAGE_KEYS.EXITS)) {
       localStorage.setItem(STORAGE_KEYS.EXITS, JSON.stringify([]));
     }
-
-    // Initialize empty violations
     if (!localStorage.getItem(STORAGE_KEYS.VIOLATIONS)) {
       localStorage.setItem(STORAGE_KEYS.VIOLATIONS, JSON.stringify([]));
     }
-
-    // Initialize empty notifications
     if (!localStorage.getItem(STORAGE_KEYS.NOTIFICATIONS)) {
       localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify([]));
     }
-
-    // Default System Settings (Required for app to function)
     if (!localStorage.getItem(STORAGE_KEYS.SETTINGS)) {
       const defaultSettings: SystemSettings = {
         systemReady: true,
         schoolActive: true,
         logoUrl: '',
-        darkMode: true,
+        mode: 'dark',
         assemblyTime: '07:00',
         gracePeriod: 15
       };
       localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(defaultSettings));
     }
-
-    // Initialize empty classes (admin will add them)
     if (!localStorage.getItem(STORAGE_KEYS.CLASSES)) {
       localStorage.setItem(STORAGE_KEYS.CLASSES, JSON.stringify([]));
     }
-
-    // Bootstrap Admin User (Required for initial access)
-    // Only the Site Admin is pre-created; other users are managed via Admin panel
     if (!localStorage.getItem(STORAGE_KEYS.USERS)) {
       const bootstrapUsers: User[] = [
         { 
@@ -1056,7 +797,7 @@ class LocalProvider implements IDatabaseProvider {
     if (!student) return Promise.resolve({ success: false, message: 'رقم الطالب غير صحيح' });
 
     const now = new Date();
-    const today = getLocalISODate(); // Use local date
+    const today = getLocalISODate();
     const allLogs = this.get<AttendanceRecord>(STORAGE_KEYS.ATTENDANCE);
     
     const exists = allLogs.find(l => l.studentId === id && l.date === today);
@@ -1081,7 +822,6 @@ class LocalProvider implements IDatabaseProvider {
     
     const updatedLogs = [...allLogs, newRecord];
     this.set(STORAGE_KEYS.ATTENDANCE, updatedLogs);
-    
     this.notifyListeners();
 
     window.dispatchEvent(new StorageEvent('storage', {
@@ -1089,7 +829,6 @@ class LocalProvider implements IDatabaseProvider {
         newValue: JSON.stringify(updatedLogs)
     }));
 
-    // Calculate student stats
     const studentLogs = updatedLogs.filter(l => l.studentId === id);
     const lateCount = studentLogs.filter(l => l.status === 'late').length;
     const totalMinutes = studentLogs.reduce((sum, l) => sum + (l.minutesLate || 0), 0);
@@ -1104,152 +843,26 @@ class LocalProvider implements IDatabaseProvider {
     });
   }
 
-  subscribeToAttendance(callback: (record: AttendanceRecord) => void): { unsubscribe: () => void } {
-    const localListener = () => {
-        const allLogs = this.get<AttendanceRecord>(STORAGE_KEYS.ATTENDANCE);
-        const lastLog = allLogs[allLogs.length - 1];
-        if (lastLog) callback(lastLog);
-    };
-    this.listeners.push(localListener);
-
-    const storageListener = (e: StorageEvent) => {
-        if (e.key === STORAGE_KEYS.ATTENDANCE && e.newValue) {
-            const newLogs = JSON.parse(e.newValue) as AttendanceRecord[];
-            const lastLog = newLogs[newLogs.length - 1];
-            const today = getLocalISODate();
-            if (lastLog && lastLog.date === today) {
-                callback(lastLog);
-            }
-        }
-    };
-    window.addEventListener('storage', storageListener);
-    
-    return { 
-        unsubscribe: () => {
-            window.removeEventListener('storage', storageListener);
-            this.listeners = this.listeners.filter(l => l !== localListener);
-        }
-    };
-  }
-
-  async getDailySummary(date: string): Promise<DailySummary | null> {
-    const key = `${STORAGE_KEYS.DAILY_SHARE}:${date}`;
-    const item = localStorage.getItem(key);
-    return Promise.resolve(item ? JSON.parse(item) : null);
-  }
-
-  async saveDailySummary(summary: DailySummary): Promise<void> {
-    const key = `${STORAGE_KEYS.DAILY_SHARE}:${summary.date_summary}`;
-    localStorage.setItem(key, JSON.stringify(summary));
-    return Promise.resolve();
-  }
-
-  async getDashboardStats(): Promise<DashboardStats> {
-    const students = await this.getStudents();
-    const today = getLocalISODate();
-    const logs = await this.getAttendance(today);
-    const total = students.length;
-    const present = logs.filter(l => l.status === 'present').length;
-    const late = logs.filter(l => l.status === 'late').length;
-    const absent = total - (present + late);
-    const rate = total > 0 ? ((present + late) / total) * 100 : 0;
-    return Promise.resolve({ totalStudents: total, presentCount: present, lateCount: late, absentCount: absent, attendanceRate: Math.round(rate) });
-  }
-
-  async getWeeklyStats(): Promise<any[]> {
-    return Promise.resolve([
-        { day: 'الأحد', presence: 80 }, { day: 'الإثنين', presence: 85 }, { day: 'الثلاثاء', presence: 90 }, { day: 'الأربعاء', presence: 82 }, { day: 'الخميس', presence: 88 }
-    ]);
-  }
-
-  async getClassStats(): Promise<any[]> {
-    return Promise.resolve([
-        { name: 'أول ثانوي', absent: 3 }, { name: 'ثاني ثانوي', absent: 5 }, { name: 'ثالث ثانوي', absent: 1 }
-    ]);
-  }
-
-  async getAttendanceReport(filters: ReportFilter): Promise<{summary: any, details: any[]}> {
-      const allLogs = this.get<AttendanceRecord>(STORAGE_KEYS.ATTENDANCE).filter(l => l.date >= filters.dateFrom && l.date <= filters.dateTo);
-      let students = await this.getStudents();
-      if (filters.className) students = students.filter(s => s.className === filters.className);
-      if (filters.section) students = students.filter(s => s.section === filters.section);
-
-      const details = allLogs.map(log => {
-          const s = students.find(st => st.id === log.studentId);
-          if (!s) return null;
-          return { studentId: log.studentId, studentName: s.name, className: s.className, date: log.date, time: log.timestamp, status: log.status };
-      }).filter(Boolean);
-
-      return Promise.resolve({
-          summary: { totalRecords: details.length, late: details.filter(d => d!.status === 'late').length, present: details.filter(d => d!.status === 'present').length },
-          details: details as any[]
-      });
-  }
-
-  async addExit(record: ExitRecord): Promise<void> {
-    const exits = this.get<ExitRecord>(STORAGE_KEYS.EXITS);
-    this.set(STORAGE_KEYS.EXITS, [...exits, { ...record, id: Math.random().toString() }]);
-    return Promise.resolve();
-  }
-
-  async getTodayExits(): Promise<ExitRecord[]> {
-      const today = getLocalISODate();
-      const exits = this.get<ExitRecord>(STORAGE_KEYS.EXITS).filter(e => e.exit_time.startsWith(today));
-      return Promise.resolve(exits);
-  }
-
-  async getStudentExits(studentId: string): Promise<ExitRecord[]> {
-      const exits = this.get<ExitRecord>(STORAGE_KEYS.EXITS).filter(e => e.studentId === studentId);
-      return Promise.resolve(exits);
-  }
-
-  async addViolation(record: ViolationRecord): Promise<void> {
-      const v = this.get<ViolationRecord>(STORAGE_KEYS.VIOLATIONS);
-      this.set(STORAGE_KEYS.VIOLATIONS, [...v, { ...record, id: Math.random().toString() }]);
-      return Promise.resolve();
-  }
-
-  async getViolations(studentId?: string): Promise<ViolationRecord[]> {
-      let v = this.get<ViolationRecord>(STORAGE_KEYS.VIOLATIONS);
-      if (studentId) v = v.filter(i => i.studentId === studentId);
-      return Promise.resolve(v);
-  }
-
-  async getTodayViolations(): Promise<ViolationRecord[]> {
-      const today = getLocalISODate();
-      const v = this.get<ViolationRecord>(STORAGE_KEYS.VIOLATIONS).filter(i => i.created_at.startsWith(today));
-      return Promise.resolve(v);
-  }
-
-  async saveNotification(notification: Notification): Promise<void> {
-      const n = this.get<Notification>(STORAGE_KEYS.NOTIFICATIONS);
-      this.set(STORAGE_KEYS.NOTIFICATIONS, [...n, { ...notification, id: Math.random().toString() }]);
-      return Promise.resolve();
-  }
-
-  async getStudentNotifications(studentId: string, className: string): Promise<Notification[]> {
-      const n = this.get<Notification>(STORAGE_KEYS.NOTIFICATIONS);
-      const filtered = n.filter(item => 
-          item.target_audience === 'all' || 
-          (item.target_audience === 'class' && item.target_id === className) ||
-          (item.target_audience === 'student' && item.target_id === studentId)
-      );
-      return Promise.resolve(filtered);
-  }
-
+  // ✅ FIX: Separated Logic for User vs 'kiosk'
   subscribeToNotifications(user: User | 'kiosk', callback: (n: Notification) => void): { unsubscribe: () => void } {
     const localListener = () => {
       const all = this.get<Notification>(STORAGE_KEYS.NOTIFICATIONS);
       const last = all[all.length - 1];
       if (!last) return;
-      if (
-        (user === 'kiosk' && last.target_audience === 'kiosk') ||
-        (user !== 'kiosk' &&
-          (last.target_audience === 'all' ||
-            (last.target_audience === 'student' && last.target_id === user.id) ||
-            (last.target_audience === 'class' && last.target_id && user.assignedClasses?.some(c => c.className === last.target_id)) ||
-            (last.target_audience === user.role)))
-      ) {
+      
+      let isRelevant = false;
+      if (user === 'kiosk') {
+          isRelevant = last.target_audience === 'kiosk';
+      } else {
+          const currentUser = user as User;
+          isRelevant = 
+            last.target_audience === 'all' ||
+            (last.target_audience === 'student' && last.target_id === currentUser.id) ||
+            (last.target_audience === 'class' && last.target_id && currentUser.assignedClasses?.some(c => c.className === last.target_id)) ||
+            (last.target_audience === currentUser.role);
+      }
+
+      if (isRelevant) {
         callback(last);
       }
     };
@@ -1268,10 +881,8 @@ class LocalProvider implements IDatabaseProvider {
     };
   }
 
-  // Classes Management (LocalProvider)
   getClasses(): Promise<SchoolClass[]> { 
     const classes = this.get<SchoolClass>(STORAGE_KEYS.CLASSES);
-    // Return default classes if empty
     if (classes.length === 0) {
       const defaultClasses: SchoolClass[] = [
         { id: '1', name: 'أول ثانوي', sections: ['أ', 'ب', 'ج'] },
@@ -1302,10 +913,8 @@ class LocalProvider implements IDatabaseProvider {
     return Promise.resolve(); 
   }
   
-  // Users Management (LocalProvider)
   getUsers(): Promise<User[]> { 
     const users = this.get<User>(STORAGE_KEYS.USERS);
-    // Bootstrap: Create only admin user if none exist
     if (users.length === 0) {
       const bootstrapAdmin: User[] = [
         { id: 'bootstrap-admin', username: 'admin', name: 'مدير النظام', role: Role.SITE_ADMIN, password: 'admin123' }
@@ -1334,7 +943,6 @@ class LocalProvider implements IDatabaseProvider {
     return Promise.resolve(); 
   }
   
-  // Settings Management (LocalProvider)
   getSettings(): Promise<SystemSettings> { 
     const settings = localStorage.getItem(STORAGE_KEYS.SETTINGS);
     if (settings) {
@@ -1357,9 +965,6 @@ class LocalProvider implements IDatabaseProvider {
         return Promise.resolve(); 
     } catch (e: any) {
         console.error('Error saving settings:', e);
-        if (e?.name === 'QuotaExceededError' || e?.code === 22) {
-            return Promise.reject(new Error('QuotaExceededError: Storage is full'));
-        }
         return Promise.reject(e);
     }
   }
@@ -1400,30 +1005,8 @@ class LocalProvider implements IDatabaseProvider {
         message: students.length > 0 ? `يوجد ${students.length} طالب مسجل` : 'لا يوجد طلاب مسجلين',
         count: students.length,
         hint: students.length === 0 ? 'قم بإضافة طلاب من لوحة الإدارة' : undefined
-      },
-      {
-        key: 'users_count',
-        title: 'المستخدمين',
-        status: users.length > 1 ? 'ok' : 'warning',
-        message: `يوجد ${users.length} مستخدم`,
-        count: users.length
-      },
-      {
-        key: 'classes_count',
-        title: 'الصفوف الدراسية',
-        status: classes.length > 0 ? 'ok' : 'warning',
-        message: classes.length > 0 ? `يوجد ${classes.length} صف` : 'لا يوجد صفوف',
-        count: classes.length
-      },
-      {
-        key: 'attendance_records',
-        title: 'سجلات الحضور',
-        status: 'ok',
-        message: `إجمالي ${attendance.length} سجل حضور`,
-        count: attendance.length
       }
     ];
-    
     return Promise.resolve(results); 
   }
 }
@@ -1436,10 +1019,8 @@ class Database implements IDatabaseProvider {
   private mode: StorageMode;
 
   constructor() {
-    // Read Config
     const storedMode = localStorage.getItem(CONFIG_KEY) as StorageMode;
-    this.mode = storedMode || 'local'; // Default to Local for offline-first operation
-    
+    this.mode = storedMode || 'local';
     console.log(`Initializing Database in [${this.mode.toUpperCase()}] mode.`);
     
     if (this.mode === 'cloud') {
@@ -1448,7 +1029,6 @@ class Database implements IDatabaseProvider {
       this.provider = new LocalProvider();
     }
 
-    // Apply saved theme on boot
     this.getSettings().then(s => {
         if (s.theme) this.applyTheme(s.theme);
     });
@@ -1460,7 +1040,7 @@ class Database implements IDatabaseProvider {
 
   setMode(mode: StorageMode) {
       localStorage.setItem(CONFIG_KEY, mode);
-      window.location.reload(); // Reload to re-initialize the correct provider
+      window.location.reload(); 
   }
 
   applyTheme(theme: AppTheme) {
@@ -1498,9 +1078,10 @@ class Database implements IDatabaseProvider {
   getTodayViolations() { return this.provider.getTodayViolations(); }
   saveNotification(n: Notification) { return this.provider.saveNotification(n); }
   getStudentNotifications(id: string, c: string) { return this.provider.getStudentNotifications(id, c); }
+  
+  // ✅ FIX: Accepts User | 'kiosk'
   subscribeToNotifications(user: User | 'kiosk', callback: (n: Notification) => void) { return this.provider.subscribeToNotifications(user, callback); }
   
-  // Structure & Users
   getClasses() { return this.provider.getClasses(); }
   saveClass(c: SchoolClass) { return this.provider.saveClass(c); }
   deleteClass(cid: string) { return this.provider.deleteClass(cid); }
@@ -1508,31 +1089,26 @@ class Database implements IDatabaseProvider {
   saveUser(u: User) { return this.provider.saveUser(u); }
   deleteUser(uid: string) { return this.provider.deleteUser(uid); }
 
-  // Support Extensions
   getSettings() { return this.provider.getSettings(); }
   saveSettings(s: SystemSettings) { 
-      // Also apply theme immediately
       if (s.theme) this.applyTheme(s.theme);
       return this.provider.saveSettings(s); 
   }
   sendBroadcast(tr: string, m: string, t: string) { return this.provider.sendBroadcast(tr, m, t); }
   runDiagnostics() { return this.provider.runDiagnostics(); }
 
-  // ------------------------------------------------------------------
-  // Offline-First Kiosk Methods (Only work with CloudProvider)
-  // ------------------------------------------------------------------
+  // Offline-First Kiosk Methods
   preloadForKiosk(): Promise<void> {
     if (this.provider instanceof CloudProvider) {
       return (this.provider as CloudProvider).preloadForKiosk();
     }
-    return Promise.resolve(); // No-op for LocalProvider
+    return Promise.resolve();
   }
 
   markAttendanceFast(id: string) {
     if (this.provider instanceof CloudProvider) {
       return (this.provider as CloudProvider).markAttendanceFast(id);
     }
-    // Fallback to normal for LocalProvider
     return this.provider.markAttendance(id);
   }
 
@@ -1540,7 +1116,7 @@ class Database implements IDatabaseProvider {
     if (this.provider instanceof CloudProvider) {
       return (this.provider as CloudProvider).getSyncStatus();
     }
-    return 'online'; // LocalProvider is always "online"
+    return 'online';
   }
 
   getPendingCount(): number {
@@ -1554,7 +1130,7 @@ class Database implements IDatabaseProvider {
     if (this.provider instanceof CloudProvider) {
       return (this.provider as CloudProvider).onSyncStatusChange(callback);
     }
-    return () => {}; // No-op for LocalProvider
+    return () => {};
   }
 
   forceSyncNow(): Promise<void> {
