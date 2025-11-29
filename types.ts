@@ -44,6 +44,7 @@ export interface AttendanceRecord {
   date: string;
   timestamp: string;
   status: 'present' | 'late' | 'absent'; // ✅ إصلاح خطأ Parents.tsx
+  minutesLate?: number;
 }
 
 export interface AttendanceScanResult {
@@ -62,19 +63,20 @@ export interface ExitRecord {
   id: string;
   studentId: string;
   reason: string;
-  exitTime: string;      // ✅ تم التوحيد إلى camelCase
-  createdBy?: string;    // ✅ تم التوحيد
-  supervisorName?: string; // ✅ تم التوحيد
+  exitTime: string;        // ✅ تم التوحيد (كان exit_time)
+  createdBy?: string;      // ✅ تم التوحيد
+  supervisorName?: string; // ✅ تم التوحيد (كان supervisor_name)
   notes?: string;
+  status?: string;
 }
 
 export interface ViolationRecord {
   id: string;
   studentId: string;
   type: string;
-  level: string;
+  level: string; // أو number حسب استخدامك
   description: string;
-  actionTaken?: string;    // ✅ تم التوحيد
+  actionTaken?: string;    // ✅ تم التوحيد (كان action_taken)
   summonGuardian?: boolean; // ✅ تم التوحيد
   createdAt: string;       // ✅ تم التوحيد
 }
@@ -100,6 +102,24 @@ export interface KioskSettings {
   screensaverEnabled?: boolean;
   screensaverTimeout?: number;
   screensaverImages?: string[];
+  screensaverPhrases?: string[];
+  screensaverCustomText?: { enabled: boolean; text: string; position: 'top'|'center'|'bottom'; size: 'small'|'medium'|'large'|'xlarge' };
+  displaySettings?: { clockSize: string; titleSize: string; cardSize: string; inputSize: string; };
+  theme?: string;
+  assemblyTime?: string;
+  gracePeriod?: number;
+}
+
+export interface NotificationTemplate {
+    title: string;
+    message: string;
+}
+
+export interface NotificationTemplates {
+    late: NotificationTemplate;
+    absent: NotificationTemplate;
+    behavior: NotificationTemplate;
+    summon: NotificationTemplate;
 }
 
 export interface SystemSettings {
@@ -114,6 +134,7 @@ export interface SystemSettings {
   assemblyTime?: string;
   gracePeriod?: number;
   kiosk?: KioskSettings;
+  notificationTemplates?: NotificationTemplates;
   socialLinks?: { supportUrl?: string; whatsapp?: string; instagram?: string; };
 }
 
@@ -139,6 +160,8 @@ export interface ReportFilter {
   dateTo: string;
   className: string;
   section: string;
+  status?: 'all' | 'present' | 'late' | 'absent';
+  searchQuery?: string;
 }
 
 export interface DailySummary {
