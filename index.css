@@ -1,0 +1,552 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ========================================
+   🎨 Futuristic Glass & Dark Neon Theme
+   Techno-Glassmorphism Design System
+   ======================================== */
+
+/* Import Cairo Font for Arabic Typography */
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  /* ═══════════════════════════════════════
+     🌈 Neon Color Palette
+     ═══════════════════════════════════════ */
+  
+  /* Primary: Cyan to Blue Gradient */
+  --color-primary-400: 34 211 238;   /* #22d3ee - Cyan 400 */
+  --color-primary-500: 6 182 212;    /* #06b6d4 - Cyan 500 */
+  --color-primary-600: 8 145 178;    /* #0891b2 - Cyan 600 */
+  
+  /* Secondary: Blue Accent */
+  --color-secondary-400: 96 165 250; /* #60a5fa - Blue 400 */
+  --color-secondary-500: 37 99 235;  /* #2563eb - Blue 600 */
+  --color-secondary-600: 29 78 216;  /* #1d4ed8 - Blue 700 */
+  
+  /* ═══════════════════════════════════════
+     🌙 Dark Mode (Default) - Deep Slate
+     ═══════════════════════════════════════ */
+  --bg-app: #0f172a;
+  --bg-app-secondary: #1e293b;
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  
+  /* Glassmorphism - Enhanced */
+  --glass-bg: rgba(15, 23, 42, 0.6);
+  --glass-bg-light: rgba(255, 255, 255, 0.05);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-border-hover: rgba(6, 182, 212, 0.4);
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+  --glass-shadow-glow: 0 0 40px rgba(6, 182, 212, 0.15);
+  
+  /* Inputs */
+  --input-bg: rgba(255, 255, 255, 0.03);
+  --input-focus-bg: rgba(255, 255, 255, 0.08);
+  --input-border: rgba(255, 255, 255, 0.1);
+  --input-focus-border: rgba(6, 182, 212, 0.6);
+  
+  /* Neon Glows */
+  --glow-cyan: rgba(6, 182, 212, 0.5);
+  --glow-blue: rgba(37, 99, 235, 0.5);
+  --glow-pink: rgba(236, 72, 153, 0.5);
+  
+  /* Ambient Blobs */
+  --blob-1: rgba(6, 182, 212, 0.25);
+  --blob-2: rgba(37, 99, 235, 0.2);
+  --blob-3: rgba(139, 92, 246, 0.15);
+  
+  /* Semantic Colors */
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-info: #3b82f6;
+}
+
+/* ========================================
+   🌞 Light Mode Variables
+   ======================================== */
+html.light-mode {
+  --bg-app: #f1f5f9;
+  --bg-app-secondary: #e2e8f0;
+  --text-main: #0f172a;
+  --text-muted: #475569;
+  
+  --glass-bg: rgba(255, 255, 255, 0.9);
+  --glass-bg-light: rgba(255, 255, 255, 0.95);
+  --glass-border: rgba(6, 182, 212, 0.15);
+  --glass-border-hover: rgba(6, 182, 212, 0.4);
+  --glass-shadow: 0 10px 40px -10px rgba(6, 182, 212, 0.15);
+  
+  --input-bg: rgba(255, 255, 255, 0.9);
+  --input-focus-bg: #ffffff;
+  --input-border: rgba(6, 182, 212, 0.2);
+  
+  --blob-1: rgba(6, 182, 212, 0.12);
+  --blob-2: rgba(37, 99, 235, 0.1);
+  --blob-3: rgba(139, 92, 246, 0.08);
+}
+
+/* ========================================
+   📝 Base Typography & Body
+   ======================================== */
+body {
+  background-color: var(--bg-app);
+  color: var(--text-main);
+  overflow-x: hidden;
+  font-family: 'Cairo', 'Tajawal', sans-serif;
+  transition: background-color 0.4s ease, color 0.4s ease;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ========================================
+   🔮 Glassmorphism Components
+   ======================================== */
+
+/* Standard Glass */
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass:hover {
+  border-color: var(--glass-border-hover);
+  box-shadow: var(--glass-shadow), var(--glass-shadow-glow);
+}
+
+/* Glass Card - Primary Component */
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card:hover {
+  border-color: var(--glass-border-hover);
+  transform: translateY(-2px);
+  box-shadow: var(--glass-shadow), 0 0 30px rgba(6, 182, 212, 0.1);
+}
+
+/* Glass Panel - Sidebar/Navigation */
+.glass-panel {
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-left: 1px solid rgba(6, 182, 212, 0.1);
+}
+
+/* ========================================
+   ✨ Neon Glow Effects
+   ======================================== */
+.text-glow {
+  text-shadow: 0 0 20px var(--glow-cyan),
+               0 0 40px rgba(6, 182, 212, 0.3);
+}
+
+.text-glow-blue {
+  text-shadow: 0 0 20px var(--glow-blue),
+               0 0 40px rgba(37, 99, 235, 0.3);
+}
+
+.text-glow-pink {
+  text-shadow: 0 0 20px var(--glow-pink),
+               0 0 40px rgba(236, 72, 153, 0.3);
+}
+
+.neon-border {
+  border: 1px solid rgba(6, 182, 212, 0.4);
+  box-shadow: 0 0 15px rgba(6, 182, 212, 0.2),
+              inset 0 0 15px rgba(6, 182, 212, 0.05);
+}
+
+.neon-glow {
+  box-shadow: 0 0 20px var(--glow-cyan),
+              0 0 40px rgba(6, 182, 212, 0.2),
+              0 0 60px rgba(6, 182, 212, 0.1);
+}
+
+/* ========================================
+   📝 Input Styles - Futuristic Glass
+   ======================================== */
+.input-glass {
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  color: var(--text-main);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(8px);
+}
+
+.input-glass:focus {
+  background: var(--input-focus-bg);
+  border-color: var(--input-focus-border);
+  box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.15),
+              0 0 20px rgba(6, 182, 212, 0.2);
+  outline: none;
+}
+
+.input-glass::placeholder {
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+/* ========================================
+   🎭 Ambient Background
+   ======================================== */
+.ambient-bg {
+  background-color: var(--bg-app);
+  transition: all 0.4s ease;
+}
+
+html.light-mode .ambient-bg {
+  background-color: transparent;
+  opacity: 0.5;
+}
+
+html.light-mode .ambient-bg > div {
+  mix-blend-mode: multiply;
+}
+
+/* ========================================
+   🌞 Light Mode Overrides
+   ======================================== */
+html.light-mode body {
+  background: linear-gradient(135deg, 
+    rgba(6, 182, 212, 0.05) 0%, 
+    #f8fafc 30%,
+    rgba(37, 99, 235, 0.03) 60%,
+    #f1f5f9 100%
+  );
+}
+
+html.light-mode .glass,
+html.light-mode .glass-card {
+  background: var(--glass-bg) !important;
+  border: 1px solid var(--glass-border) !important;
+  box-shadow: var(--glass-shadow) !important;
+}
+
+html.light-mode .glass-panel {
+  background: linear-gradient(180deg, 
+    rgba(255, 255, 255, 0.98) 0%,
+    rgba(6, 182, 212, 0.05) 100%
+  );
+  border-left: 1px solid var(--glass-border);
+}
+
+html.light-mode .text-glow,
+html.light-mode .text-glow-blue {
+  text-shadow: none;
+  color: rgb(var(--color-primary-600));
+}
+
+html.light-mode .input-glass {
+  background: var(--input-bg);
+  border: 2px solid var(--input-border);
+  color: var(--text-main);
+}
+
+html.light-mode .input-glass:focus {
+  background: var(--input-focus-bg);
+  border-color: rgb(var(--color-primary-500));
+  box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.15);
+}
+
+/* Light mode text colors */
+html.light-mode .text-white { color: #0f172a !important; }
+html.light-mode .text-gray-100 { color: #1e293b !important; }
+html.light-mode .text-gray-200 { color: #334155 !important; }
+html.light-mode .text-gray-300 { color: #475569 !important; }
+html.light-mode .text-gray-400 { color: #64748b !important; }
+html.light-mode .text-gray-500 { color: #475569 !important; }
+
+/* Keep accent colors vibrant in light mode */
+html.light-mode .text-primary-300,
+html.light-mode .text-primary-400 { color: rgb(var(--color-primary-500)) !important; }
+html.light-mode .text-cyan-300,
+html.light-mode .text-cyan-400 { color: #0891b2 !important; }
+
+/* Light mode backgrounds */
+html.light-mode .bg-white\/5,
+html.light-mode .bg-white\/10,
+html.light-mode .bg-white\/20 { 
+  background: var(--glass-bg) !important;
+}
+
+html.light-mode .bg-black\/20,
+html.light-mode .bg-black\/30,
+html.light-mode .bg-black\/40 { 
+  background: rgba(0, 0, 0, 0.04) !important;
+}
+
+/* Light mode borders */
+html.light-mode .border-white\/5,
+html.light-mode .border-white\/10 { 
+  border-color: var(--glass-border) !important; 
+}
+
+/* Light mode buttons */
+html.light-mode button.bg-primary-600,
+html.light-mode .bg-primary-600 {
+  background: linear-gradient(135deg, rgb(var(--color-primary-500)), rgb(var(--color-secondary-500))) !important;
+  color: white !important;
+  box-shadow: 0 4px 20px rgba(6, 182, 212, 0.35);
+}
+
+/* Light mode semantic colors */
+html.light-mode .text-emerald-400 { color: #059669 !important; }
+html.light-mode .text-amber-400 { color: #d97706 !important; }
+html.light-mode .text-red-400 { color: #dc2626 !important; }
+
+/* ========================================
+   🖱️ Custom Scrollbar - Neon Style
+   ======================================== */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, 
+    rgba(6, 182, 212, 0.5) 0%,
+    rgba(37, 99, 235, 0.4) 100%
+  );
+  border-radius: 4px;
+  border: 1px solid rgba(6, 182, 212, 0.2);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, 
+    rgba(6, 182, 212, 0.7) 0%,
+    rgba(37, 99, 235, 0.6) 100%
+  );
+}
+
+html.light-mode ::-webkit-scrollbar-track {
+  background: rgba(6, 182, 212, 0.08);
+}
+
+html.light-mode ::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, 
+    rgba(6, 182, 212, 0.4) 0%,
+    rgba(37, 99, 235, 0.3) 100%
+  );
+}
+
+/* ========================================
+   ✨ Selection - Neon Highlight
+   ======================================== */
+::selection {
+  background: rgba(6, 182, 212, 0.3);
+  color: #f8fafc;
+}
+
+html.light-mode ::selection {
+  background: rgba(6, 182, 212, 0.25);
+  color: #0f172a;
+}
+
+/* ========================================
+   🎬 Animations
+   ======================================== */
+@keyframes blob {
+  0%, 100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  25% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+  50% {
+    transform: translate(-20px, 30px) scale(0.95);
+  }
+  75% {
+    transform: translate(-30px, -20px) scale(1.05);
+  }
+}
+
+.animate-blob {
+  animation: blob 8s ease-in-out infinite;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.5s ease-out forwards;
+}
+
+@keyframes fade-in-up {
+  from { 
+    opacity: 0; 
+    transform: translateY(20px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(6, 182, 212, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(6, 182, 212, 0.5);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes neon-flicker {
+  0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% {
+    text-shadow: 0 0 10px var(--glow-cyan),
+                 0 0 20px var(--glow-cyan),
+                 0 0 30px var(--glow-cyan);
+  }
+  20%, 24%, 55% {
+    text-shadow: none;
+  }
+}
+
+.animate-neon-flicker {
+  animation: neon-flicker 3s infinite;
+}
+
+/* ========================================
+   🎯 Interactive States - Micro-interactions
+   ======================================== */
+button, 
+.clickable {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+button:active,
+.clickable:active {
+  transform: scale(0.97);
+}
+
+/* Hover glow effect for interactive elements */
+.hover-glow:hover {
+  box-shadow: 0 0 25px rgba(6, 182, 212, 0.4);
+  border-color: rgba(6, 182, 212, 0.5);
+}
+
+/* Focus ring - Neon style */
+.focus-neon:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--bg-app),
+              0 0 0 4px rgba(6, 182, 212, 0.5);
+}
+
+/* ========================================
+   🖨️ Print Styles
+   ======================================== */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #print-area, #print-area * {
+    visibility: visible;
+  }
+  #print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    background: white;
+    color: black;
+    padding: 20px;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .glass, .glass-card, .input-glass {
+    background: none !important;
+    border: 1px solid #ccc !important;
+    box-shadow: none !important;
+    color: black !important;
+  }
+}
+
+/* ========================================
+   📱 Responsive Utilities
+   ======================================== */
+@media (max-width: 768px) {
+  .glass-card {
+    backdrop-filter: blur(16px);
+  }
+  
+  .text-glow {
+    text-shadow: 0 0 10px var(--glow-cyan);
+  }
+}
+
+/* ========================================
+   🎨 Utility Classes
+   ======================================== */
+.gradient-cyan-blue {
+  background: linear-gradient(135deg, 
+    rgb(var(--color-primary-500)) 0%, 
+    rgb(var(--color-secondary-500)) 100%
+  );
+}
+
+.gradient-text-cyan {
+  background: linear-gradient(135deg, 
+    rgb(var(--color-primary-400)) 0%, 
+    rgb(var(--color-secondary-400)) 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.border-glow-cyan {
+  border: 1px solid rgba(6, 182, 212, 0.3);
+  box-shadow: 0 0 15px rgba(6, 182, 212, 0.15);
+}
+
+/* Status indicators with glow */
+.status-success {
+  color: var(--color-success);
+  text-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+}
+
+.status-warning {
+  color: var(--color-warning);
+  text-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
+}
+
+.status-danger {
+  color: var(--color-danger);
+  text-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
+}

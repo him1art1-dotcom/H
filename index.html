@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>نظام حاضر - Hader</title>
+    
+    <!-- Google Fonts - Cairo for Futuristic Arabic Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&family=Amiri:ital,wght@0,400;0,700;1,400&family=Tajawal:wght@200;300;400;500;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Excel & PDF Libraries -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
+    <!-- Import Map for ES Modules -->
+    <script type="importmap">
+    {
+      "imports": {
+        "react": "https://aistudiocdn.com/react@^19.2.0",
+        "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+        "react/": "https://aistudiocdn.com/react@^19.2.0/",
+        "react-router-dom": "https://aistudiocdn.com/react-router-dom@^7.9.6",
+        "lucide-react": "https://aistudiocdn.com/lucide-react@^0.554.0",
+        "recharts": "https://aistudiocdn.com/recharts@^3.5.0",
+        "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.1",
+        "vite": "https://aistudiocdn.com/vite@^7.2.4",
+        "@supabase/supabase-js": "https://aistudiocdn.com/@supabase/supabase-js@^2.84.0"
+      }
+    }
+    </script>
+    
+    <!-- Tailwind CSS CDN (for development) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      // ═══════════════════════════════════════════════════════════════
+      // 🎨 Futuristic Glass & Dark Neon Theme - Tailwind Configuration
+      // ═══════════════════════════════════════════════════════════════
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Cairo', 'Tajawal', 'sans-serif'],
+              serif: ['Amiri', 'serif'],
+            },
+            colors: {
+              dark: {
+                900: '#0f172a', // Deep Slate/Navy - Primary BG
+                800: '#1e293b',
+                700: '#334155',
+              },
+              // Primary: Cyan (#06b6d4) - Neon Glow
+              primary: {
+                300: 'rgb(var(--color-primary-300, 103 232 249) / <alpha-value>)',
+                400: 'rgb(var(--color-primary-400, 34 211 238) / <alpha-value>)',
+                500: 'rgb(var(--color-primary-500, 6 182 212) / <alpha-value>)',
+                600: 'rgb(var(--color-primary-600, 8 145 178) / <alpha-value>)',
+              },
+              // Secondary: Blue (#2563eb) - Accent
+              secondary: {
+                300: 'rgb(var(--color-secondary-300, 147 197 253) / <alpha-value>)',
+                400: 'rgb(var(--color-secondary-400, 96 165 250) / <alpha-value>)',
+                500: 'rgb(var(--color-secondary-500, 37 99 235) / <alpha-value>)',
+                600: 'rgb(var(--color-secondary-600, 29 78 216) / <alpha-value>)',
+              }
+            },
+            animation: {
+              'blob': 'blob 8s ease-in-out infinite',
+              'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+              'glow': 'glow 2s ease-in-out infinite alternate',
+              'float': 'float 6s ease-in-out infinite',
+            },
+            keyframes: {
+              blob: {
+                '0%, 100%': { transform: 'translate(0px, 0px) scale(1)' },
+                '25%': { transform: 'translate(30px, -50px) scale(1.1)' },
+                '50%': { transform: 'translate(-20px, 30px) scale(0.95)' },
+                '75%': { transform: 'translate(-30px, -20px) scale(1.05)' },
+              },
+              glow: {
+                '0%': { boxShadow: '0 0 20px rgba(6, 182, 212, 0.3)' },
+                '100%': { boxShadow: '0 0 40px rgba(6, 182, 212, 0.6)' },
+              },
+              float: {
+                '0%, 100%': { transform: 'translateY(0px)' },
+                '50%': { transform: 'translateY(-10px)' },
+              },
+            },
+            boxShadow: {
+              'neon': '0 0 20px rgba(6, 182, 212, 0.4)',
+              'neon-lg': '0 0 40px rgba(6, 182, 212, 0.5)',
+            },
+          },
+        },
+      }
+    </script>
+    
+    <!-- Main Stylesheet -->
+    <link rel="stylesheet" href="/index.css">
+  </head>
+  <body class="font-sans antialiased selection:bg-cyan-500/30 selection:text-white">
+    <!-- ═══════════════════════════════════════════════════════════════
+         ✨ Ambient Background - Floating Neon Blobs
+         ═══════════════════════════════════════════════════════════════ -->
+    <div class="fixed inset-0 w-full h-full pointer-events-none z-[-1] overflow-hidden ambient-bg">
+      <!-- Primary Cyan Blob - Top Left -->
+      <div class="absolute top-[-15%] left-[15%] w-[600px] h-[600px] bg-cyan-500 rounded-full mix-blend-screen filter blur-[160px] opacity-25 animate-blob"></div>
+      <!-- Secondary Blue Blob - Top Right -->
+      <div class="absolute top-[5%] right-[15%] w-[500px] h-[500px] bg-blue-600 rounded-full mix-blend-screen filter blur-[140px] opacity-20 animate-blob animation-delay-2000"></div>
+      <!-- Tertiary Violet Blob - Bottom -->
+      <div class="absolute bottom-[-15%] left-[25%] w-[700px] h-[700px] bg-violet-600 rounded-full mix-blend-screen filter blur-[180px] opacity-15 animate-blob animation-delay-4000"></div>
+    </div>
+    
+    <!-- React Root -->
+    <div id="root"></div>
+    
+    <!-- Main Script -->
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
